@@ -8,18 +8,23 @@ app.get("/stream_audio", async (req, res) => {
     if (!url) return res.status(400).json({ error: "Missing 'url' parameter" });
 
     try {
-        // Get YouTube video info
+        // Get video info
         const info = await ytdl.getInfo(url);
 
-        // Choose best audio format
-        const format = ytdl.chooseFormat(info.formats, { quality: "highestaudio" });
+        // Get best audio format (Opus/M4A)
+        const format = ytdl.chooseFormat(info.formats, { filter: "audioonly" });
 
-        if (!format || !format.url) {
-            return res.status(404).json({ error: "No audio stream found" });
+        if (!format) {
+            return res.status(404).json({ error: "No audio format available" });
         }
 
-        // Send JSON response with stream URL
-        res.json({ stream_url: format.url });
+        // Set headers for streaming
+        res.setHeader("Content-Type", "audio/mpeg");
+        res.setHeader("Cache-Control", "no-cache");
+
+        // Stream audio
+        const stream = ytdl(url, { format });
+        stream.pipe(res);
 
     } catch (error) {
         console.error("Error:", error.message);
